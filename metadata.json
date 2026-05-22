@@ -1,0 +1,6 @@
+{
+  "name": "CuantoCobras MVP",
+  "description": "Buscador salarial crowdsourced y foro financiero sin base de datos real inicial.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
