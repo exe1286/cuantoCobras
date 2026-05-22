@@ -1,6 +1,6 @@
 {
   "name": "CuantoCobras MVP",
-  "description": "Buscador salarial crowdsourced y foro financiero sin base de datos real inicial.",
+  "description": "Buscador salarial crowdsourced y foro financiero con Supabase.",
   "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "majorCapabilities": []
 }

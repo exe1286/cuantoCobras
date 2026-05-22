@@ -74,7 +74,7 @@ export default function Home() {
                 </ul>
               ) : (
                 <div className="px-4 py-4 text-center text-slate-500 text-sm">
-                  No se encontraron resultados para "{query}"
+                  No se encontraron resultados para &quot;{query}&quot;
                 </div>
               )}
             </div>

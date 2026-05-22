@@ -1,20 +1,51 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# CuantoCobras
 
-# Run and deploy your AI Studio app
+Buscador salarial colaborativo y foro financiero para Argentina.
 
-This contains everything you need to run your app locally.
+## Requisitos
 
-View your app in AI Studio: https://ai.studio/apps/349be45c-0e80-45a8-806e-f8f247ae282f
+- Node.js
+- Un proyecto en Supabase
 
-## Run Locally
+## Configuracion local
 
-**Prerequisites:**  Node.js
+1. Instalar dependencias:
 
+   ```bash
+   npm install
+   ```
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+2. Crear `.env.local` usando `.env.example` como base:
+
+   ```bash
+   NEXT_PUBLIC_SUPABASE_URL="https://your-project.supabase.co"
+   NEXT_PUBLIC_SUPABASE_ANON_KEY="your-supabase-anon-key"
+   ```
+
+3. En Supabase, abrir el SQL Editor y ejecutar:
+
+   ```text
+   supabase/schema.sql
+   ```
+
+4. En Supabase Auth, habilitar Google como proveedor OAuth y agregar la URL local:
+
+   ```text
+   http://localhost:3000
+   ```
+
+5. Ejecutar la app:
+
+   ```bash
+   npm run dev
+   ```
+
+## Notas
+
+- Si Supabase no esta configurado, la app usa datos mínimos en memoria para poder abrir la interfaz.
+- La tabla `professions` se carga con una base inicial desde `supabase/schema.sql`.
+- Para convertir un usuario en admin, actualizar su perfil en Supabase:
+
+  ```sql
+  update public.profiles set role = 'admin' where email = 'tu-email@dominio.com';
+  ```

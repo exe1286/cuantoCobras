@@ -18,20 +18,32 @@ export default function ProfessionSalariesPage() {
   const [filterWorkload, setFilterWorkload] = useState<string>('all');
 
   useEffect(() => {
-    if (slug) {
-      loadData();
-    }
-  }, [slug]);
+    if (!slug) return;
 
-  async function loadData() {
-    const p = await dataService.getProfessionBySlug(slug as string);
-    if (!p) {
-      router.push('/salarios');
-      return;
+    let isMounted = true;
+
+    async function loadData() {
+      const p = await dataService.getProfessionBySlug(slug as string);
+      if (!isMounted) return;
+
+      if (!p) {
+        router.push('/salarios');
+        return;
+      }
+
+      const loadedSalaries = await dataService.getSalariesByProfessionId(p.id);
+      if (!isMounted) return;
+
+      setProfession(p);
+      setSalaries(loadedSalaries);
     }
-    setProfession(p);
-    setSalaries(await dataService.getSalariesByProfessionId(p.id));
-  }
+
+    loadData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [router, slug]);
 
   if (!profession) {
     return <div className="p-8 text-center text-slate-500">Cargando...</div>;

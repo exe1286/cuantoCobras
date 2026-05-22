@@ -1,12 +1,18 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { User, onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth';
-import { auth, googleProvider } from '@/lib/firebase';
+import type { User as SupabaseUser } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabase';
 import { dataService, Profile } from '@/lib/data';
 
+export type AppUser = SupabaseUser & {
+  uid: string;
+  displayName: string | null;
+  photoURL: string | null;
+};
+
 interface AuthContextType {
-  user: User | null;
+  user: AppUser | null;
   profile: Profile | null;
   isLoading: boolean;
   loginWithGoogle: () => Promise<void>;
@@ -23,51 +29,109 @@ const AuthContext = createContext<AuthContextType>({
 
 export const useAuth = () => useContext(AuthContext);
 
+function normalizeUser(user: SupabaseUser): AppUser {
+  return {
+    ...user,
+    uid: user.id,
+    displayName:
+      user.user_metadata?.full_name ||
+      user.user_metadata?.name ||
+      user.email?.split('@')[0] ||
+      null,
+    photoURL:
+      user.user_metadata?.avatar_url ||
+      user.user_metadata?.picture ||
+      null,
+  };
+}
+
+async function syncProfile(user: AppUser) {
+  let userProfile = await dataService.getProfileByUid(user.uid);
+
+  if (!userProfile) {
+    userProfile = await dataService.createProfile({
+      uid: user.uid,
+      name: user.displayName || 'Usuario',
+      email: user.email || '',
+      photoURL: user.photoURL || undefined,
+      role: 'user',
+    });
+  }
+
+  return userProfile;
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<AppUser | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(Boolean(supabase));
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      setUser(currentUser);
-      if (currentUser) {
-        // Sync or register user in mock DB.
-        // During real DB phase, you'd fetch from Firestore `users` collection.
-        let userProfile = await dataService.getProfileByUid(currentUser.uid);
-        if (!userProfile) {
-          userProfile = await dataService.createProfile({
-            uid: currentUser.uid,
-            name: currentUser.displayName || 'Usuario',
-            email: currentUser.email || '',
-            photoURL: currentUser.photoURL || undefined,
-            role: 'user', // Default role
-          });
-        }
-        setProfile(userProfile);
+    if (!supabase) return;
+
+    const client = supabase;
+    let isMounted = true;
+
+    async function loadSession() {
+      const { data } = await client.auth.getSession();
+      const sessionUser = data.session?.user;
+
+      if (!isMounted) return;
+
+      if (sessionUser) {
+        const appUser = normalizeUser(sessionUser);
+        setUser(appUser);
+        setProfile(await syncProfile(appUser));
       } else {
+        setUser(null);
         setProfile(null);
       }
+
+      setIsLoading(false);
+    }
+
+    loadSession();
+
+    const {
+      data: { subscription },
+    } = client.auth.onAuthStateChange(async (_event, session) => {
+      if (!isMounted) return;
+
+      if (session?.user) {
+        const appUser = normalizeUser(session.user);
+        setUser(appUser);
+        setProfile(await syncProfile(appUser));
+      } else {
+        setUser(null);
+        setProfile(null);
+      }
+
       setIsLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const loginWithGoogle = async () => {
-    try {
-      await signInWithPopup(auth, googleProvider);
-    } catch (error) {
-      console.error('Error signing in with Google', error);
+    if (!supabase) {
+      console.error('Supabase is not configured. Check NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.');
+      return;
     }
+
+    await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: window.location.origin,
+      },
+    });
   };
 
   const logout = async () => {
-    try {
-      await signOut(auth);
-    } catch (error) {
-      console.error('Error signing out', error);
-    }
+    if (!supabase) return;
+    await supabase.auth.signOut();
   };
 
   return (

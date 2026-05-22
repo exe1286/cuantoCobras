@@ -4,7 +4,6 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from './AuthProvider';
 import { Menu, X, User as UserIcon, LogOut, Settings } from 'lucide-react';
-import Image from 'next/image';
 
 export default function Navbar() {
   const { user, profile, loginWithGoogle, logout } = useAuth();
