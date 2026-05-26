@@ -194,17 +194,22 @@ class SupabaseDataService {
   async getProfessions() {
     if (!supabase) return [...FALLBACK_PROFESSIONS];
 
-    const { data, error } = await supabase
-      .from('professions')
-      .select('*')
-      .order('name', { ascending: true });
+    try {
+      const { data, error } = await supabase
+        .from('professions')
+        .select('*')
+        .order('name', { ascending: true });
 
-    if (error) {
-      console.error('Error loading professions', error);
+      if (error) {
+        console.error('Error loading professions', error);
+        return [...FALLBACK_PROFESSIONS];
+      }
+
+      return this.mergeWithFallbackProfessions(data.map(row => this.mapProfession(row)));
+    } catch (error) {
+      console.error('Unexpected error loading professions', error);
       return [...FALLBACK_PROFESSIONS];
     }
-
-    return this.mergeWithFallbackProfessions(data.map(row => this.mapProfession(row)));
   }
 
   async getProfessionBySlug(slug: string) {

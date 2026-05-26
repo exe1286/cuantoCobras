@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/AuthProvider';
 import { dataService, Profession } from '@/lib/data';
+import { FALLBACK_PROFESSIONS } from '@/lib/professions';
 import { DollarSign, Send, AlertCircle, CheckCircle2, Search, ChevronDown } from 'lucide-react';
 import Link from 'next/link';
 
@@ -18,7 +19,7 @@ export default function AportarSueldo() {
   const { user } = useAuth();
   const router = useRouter();
 
-  const [professions, setProfessions] = useState<Profession[]>([]);
+  const [professions, setProfessions] = useState<Profession[]>(FALLBACK_PROFESSIONS);
   
   const [searchQuery, setSearchQuery] = useState('');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -35,10 +36,24 @@ export default function AportarSueldo() {
   const [error, setError] = useState('');
 
   useEffect(() => {
+    let isMounted = true;
+
     async function load() {
-      setProfessions(await dataService.getProfessions());
+      try {
+        const loadedProfessions = await dataService.getProfessions();
+        if (isMounted && loadedProfessions.length > 0) {
+          setProfessions(loadedProfessions);
+        }
+      } catch (err) {
+        console.error('Error loading professions', err);
+      }
     }
+
     load();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // Group and sort professions
