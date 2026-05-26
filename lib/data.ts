@@ -1,5 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from './supabase';
+import { FALLBACK_PROFESSIONS } from './professions';
 
 export interface Profile {
   id: string;
@@ -53,41 +54,6 @@ export interface Reply {
   createdAt: number;
 }
 
-const FALLBACK_PROFESSIONS: Profession[] = [
-  { id: 'programador-web', slug: 'programador-web', name: 'Programador Web', category: 'Tecnologia', keywords: ['desarrollador', 'developer', 'sistemas', 'programacion'] },
-  { id: 'desarrollador-backend', slug: 'desarrollador-backend', name: 'Desarrollador Backend', category: 'Tecnologia', keywords: ['programador', 'developer', 'sistemas', 'back'] },
-  { id: 'desarrollador-frontend', slug: 'desarrollador-frontend', name: 'Desarrollador Frontend', category: 'Tecnologia', keywords: ['programador', 'developer', 'sistemas', 'front'] },
-  { id: 'analista-de-datos', slug: 'analista-de-datos', name: 'Analista de Datos', category: 'Tecnologia', keywords: ['data', 'analytics'] },
-  { id: 'disenador-ux-ui', slug: 'disenador-ux-ui', name: 'Disenador UX/UI', category: 'Tecnologia', keywords: ['design', 'web', 'interfaces'] },
-  { id: 'soporte-tecnico', slug: 'soporte-tecnico', name: 'Soporte Tecnico', category: 'Tecnologia', keywords: ['sistemas', 'helpdesk', 'it'] },
-  { id: 'medico-clinico', slug: 'medico-clinico', name: 'Medico Clinico', category: 'Salud' },
-  { id: 'enfermero', slug: 'enfermero', name: 'Enfermero/a', category: 'Salud' },
-  { id: 'odontologo', slug: 'odontologo', name: 'Odontologo/a', category: 'Salud' },
-  { id: 'psicologo', slug: 'psicologo', name: 'Psicologo/a', category: 'Salud' },
-  { id: 'docente-primaria', slug: 'docente-primaria', name: 'Docente Nivel Primario', category: 'Educacion' },
-  { id: 'docente-secundaria', slug: 'docente-secundaria', name: 'Docente Nivel Secundario', category: 'Educacion' },
-  { id: 'plomero', slug: 'plomero', name: 'Plomero', category: 'Oficios y Construccion' },
-  { id: 'electricista', slug: 'electricista', name: 'Electricista', category: 'Oficios y Construccion' },
-  { id: 'gasista', slug: 'gasista', name: 'Gasista Matriculado', category: 'Oficios y Construccion' },
-  { id: 'albanil', slug: 'albanil', name: 'Albanil', category: 'Oficios y Construccion' },
-  { id: 'vendedor-local', slug: 'vendedor-local', name: 'Vendedor/a de Local', category: 'Comercio y Ventas' },
-  { id: 'cajero', slug: 'cajero', name: 'Cajero/a', category: 'Comercio y Ventas' },
-  { id: 'cocinero', slug: 'cocinero', name: 'Cocinero/a', category: 'Gastronomia' },
-  { id: 'chef', slug: 'chef', name: 'Chef', category: 'Gastronomia' },
-  { id: 'contador-publico', slug: 'contador-publico', name: 'Contador/a Publico/a', category: 'Administracion y Finanzas' },
-  { id: 'asistente-administrativo', slug: 'asistente-administrativo', name: 'Asistente Administrativo', category: 'Administracion y Finanzas' },
-  { id: 'data-entry', slug: 'data-entry', name: 'Data Entry / Carga de Datos', category: 'Administracion y Finanzas', keywords: ['data enter', 'data entry', 'carga de datos', 'administrativo'] },
-  { id: 'ingeniero-civil', slug: 'ingeniero-civil', name: 'Ingeniero/a Civil', category: 'Ingenieria' },
-  { id: 'arquitecto', slug: 'arquitecto', name: 'Arquitecto/a', category: 'Ingenieria y Construccion' },
-  { id: 'abogado', slug: 'abogado', name: 'Abogado/a General', category: 'Legales' },
-  { id: 'disenador-grafico', slug: 'disenador-grafico', name: 'Disenador/a Grafico/a', category: 'Diseno y Comunicacion' },
-  { id: 'community-manager', slug: 'community-manager', name: 'Community Manager', category: 'Diseno y Comunicacion' },
-  { id: 'chofer-camion', slug: 'chofer-camion', name: 'Chofer de Camion', category: 'Logistica y Transporte' },
-  { id: 'repartidor', slug: 'repartidor', name: 'Repartidor/a', category: 'Logistica y Transporte' },
-  { id: 'policia', slug: 'policia', name: 'Policia', category: 'Seguridad' },
-  { id: 'empleada-domestica', slug: 'empleada-domestica', name: 'Personal de Casas Particulares', category: 'Otros' },
-];
-
 const FALLBACK_POSTS: Post[] = [
   {
     id: 'demo-1',
@@ -108,6 +74,20 @@ class SupabaseDataService {
   private fallbackSalaryReports: SalaryReport[] = [];
   private fallbackPosts: Post[] = [...FALLBACK_POSTS];
   private fallbackReplies: Reply[] = [];
+
+  private mergeWithFallbackProfessions(professions: Profession[]) {
+    const byId = new Map<string, Profession>();
+
+    FALLBACK_PROFESSIONS.forEach(profession => {
+      byId.set(profession.id, profession);
+    });
+
+    professions.forEach(profession => {
+      byId.set(profession.id, profession);
+    });
+
+    return Array.from(byId.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }
 
   private mapProfile(row: any): Profile {
     return {
@@ -224,7 +204,7 @@ class SupabaseDataService {
       return [...FALLBACK_PROFESSIONS];
     }
 
-    return data.length > 0 ? data.map(row => this.mapProfession(row)) : [...FALLBACK_PROFESSIONS];
+    return this.mergeWithFallbackProfessions(data.map(row => this.mapProfession(row)));
   }
 
   async getProfessionBySlug(slug: string) {
