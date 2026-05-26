@@ -75,6 +75,22 @@ class SupabaseDataService {
   private fallbackPosts: Post[] = [...FALLBACK_POSTS];
   private fallbackReplies: Reply[] = [];
 
+  private async withTimeout<T>(promise: Promise<T>, timeoutMs = 15000): Promise<T> {
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      timeoutId = setTimeout(() => {
+        reject(new Error('La conexion con Supabase tardo demasiado. Revisa tu conexion e intenta nuevamente.'));
+      }, timeoutMs);
+    });
+
+    try {
+      return await Promise.race([promise, timeoutPromise]);
+    } finally {
+      if (timeoutId) clearTimeout(timeoutId);
+    }
+  }
+
   private mergeWithFallbackProfessions(professions: Profession[]) {
     const byId = new Map<string, Profession>();
 
@@ -286,18 +302,22 @@ class SupabaseDataService {
       return newReport;
     }
 
-    const { data, error } = await supabase
-      .from('salary_reports')
-      .insert({
-        profession_id: report.professionId,
-        amount_monthly: report.amountMonthly,
-        modality: report.modality,
-        workload: report.workload || null,
-        seniority: report.seniority,
-        province: report.province,
-      })
-      .select('*')
-      .single();
+    const { data, error } = await this.withTimeout(
+      Promise.resolve(
+        supabase
+          .from('salary_reports')
+          .insert({
+            profession_id: report.professionId,
+            amount_monthly: report.amountMonthly,
+            modality: report.modality,
+            workload: report.workload || null,
+            seniority: report.seniority,
+            province: report.province,
+          })
+          .select('*')
+          .single()
+      )
+    );
 
     if (error) throw error;
     return this.mapSalary(data);

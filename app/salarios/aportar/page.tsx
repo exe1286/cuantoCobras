@@ -82,6 +82,8 @@ export default function AportarSueldo() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
+
     setError('');
     
     if (!professionId) {
@@ -110,7 +112,17 @@ export default function AportarSueldo() {
         router.push('/salarios');
       }, 3000);
     } catch (err) {
-      setError('Ocurrió un error al guardar tu aporte. Intentá nuevamente.');
+      console.error('Error creating salary report', err);
+
+      const message =
+        err instanceof Error
+          ? err.message
+          : typeof err === 'object' && err !== null && 'message' in err
+            ? String((err as { message: unknown }).message)
+            : 'Ocurrió un error al guardar tu aporte. Intentá nuevamente.';
+
+      setError(message);
+    } finally {
       setIsSubmitting(false);
     }
   };
