@@ -179,6 +179,7 @@ insert into public.professions (id, slug, name, category, keywords) values
   ('chef', 'chef', 'Chef', 'Gastronomia', array[]::text[]),
   ('contador-publico', 'contador-publico', 'Contador/a Publico/a', 'Administracion y Finanzas', array[]::text[]),
   ('asistente-administrativo', 'asistente-administrativo', 'Asistente Administrativo', 'Administracion y Finanzas', array[]::text[]),
+  ('data-entry', 'data-entry', 'Data Entry / Carga de Datos', 'Administracion y Finanzas', array['data enter', 'data entry', 'carga de datos', 'administrativo']),
   ('ingeniero-civil', 'ingeniero-civil', 'Ingeniero/a Civil', 'Ingenieria', array[]::text[]),
   ('arquitecto', 'arquitecto', 'Arquitecto/a', 'Ingenieria y Construccion', array[]::text[]),
   ('abogado', 'abogado', 'Abogado/a General', 'Legales', array[]::text[]),

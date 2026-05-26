@@ -76,6 +76,7 @@ const FALLBACK_PROFESSIONS: Profession[] = [
   { id: 'chef', slug: 'chef', name: 'Chef', category: 'Gastronomia' },
   { id: 'contador-publico', slug: 'contador-publico', name: 'Contador/a Publico/a', category: 'Administracion y Finanzas' },
   { id: 'asistente-administrativo', slug: 'asistente-administrativo', name: 'Asistente Administrativo', category: 'Administracion y Finanzas' },
+  { id: 'data-entry', slug: 'data-entry', name: 'Data Entry / Carga de Datos', category: 'Administracion y Finanzas', keywords: ['data enter', 'data entry', 'carga de datos', 'administrativo'] },
   { id: 'ingeniero-civil', slug: 'ingeniero-civil', name: 'Ingeniero/a Civil', category: 'Ingenieria' },
   { id: 'arquitecto', slug: 'arquitecto', name: 'Arquitecto/a', category: 'Ingenieria y Construccion' },
   { id: 'abogado', slug: 'abogado', name: 'Abogado/a General', category: 'Legales' },
