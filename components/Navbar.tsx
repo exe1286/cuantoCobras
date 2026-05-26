@@ -9,6 +9,23 @@ export default function Navbar() {
   const { user, profile, loginWithGoogle, logout } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  const handleLogout = async () => {
+    if (isLoggingOut) return;
+
+    setIsLoggingOut(true);
+    setIsMenuOpen(false);
+    setIsProfileMenuOpen(false);
+
+    try {
+      await logout();
+    } catch (error) {
+      console.error('Error closing session', error);
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
 
   return (
     <nav className="bg-slate-900 text-white shadow-md z-20 relative">
@@ -70,14 +87,12 @@ export default function Navbar() {
                       </Link>
                     )}
                     <button
-                      onClick={() => {
-                        logout();
-                        setIsProfileMenuOpen(false);
-                      }}
+                      onClick={handleLogout}
+                      disabled={isLoggingOut}
                       className="block w-full text-left px-4 py-2 text-sm hover:bg-slate-700 hover:text-white transition-colors flex items-center"
                     >
                       <LogOut className="w-4 h-4 mr-2" />
-                      Cerrar sesión
+                      {isLoggingOut ? 'Cerrando...' : 'Cerrar sesión'}
                     </button>
                   </div>
                 )}
@@ -139,10 +154,11 @@ export default function Navbar() {
                   </Link>
                 )}
                 <button
-                  onClick={() => { logout(); setIsMenuOpen(false); }}
+                  onClick={handleLogout}
+                  disabled={isLoggingOut}
                   className="block w-full text-left px-3 py-2 rounded-xl text-base font-medium text-red-400 hover:bg-slate-800"
                 >
-                  Cerrar sesión
+                  {isLoggingOut ? 'Cerrando...' : 'Cerrar sesión'}
                 </button>
               </>
             )}
