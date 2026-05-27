@@ -8,7 +8,15 @@ import { FALLBACK_PROFESSIONS } from '@/lib/professions';
 import { DollarSign, Send, AlertCircle, CheckCircle2, Search, ChevronDown } from 'lucide-react';
 import Link from 'next/link';
 import { searchProfessions } from '@/lib/search';
-import { formatReportDate, MAX_REASONABLE_SALARY, MIN_REASONABLE_SALARY } from '@/lib/salary-utils';
+import {
+  formatMoney,
+  formatReportDate,
+  MAX_REASONABLE_SALARY,
+  MIN_REASONABLE_SALARY,
+  MODALITY_LABELS,
+  SENIORITY_LABELS,
+  WORKLOAD_LABELS,
+} from '@/lib/salary-utils';
 
 const PROVINCES = [
   'Buenos Aires', 'Catamarca', 'Chaco', 'Chubut', 'Córdoba', 'Corrientes', 'Entre Ríos',
@@ -35,6 +43,7 @@ export default function AportarSueldo() {
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingExistingReport, setIsLoadingExistingReport] = useState(false);
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [existingReport, setExistingReport] = useState<SalaryReport | null>(null);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
@@ -104,10 +113,7 @@ export default function AportarSueldo() {
 
   const selectedProfession = professions.find(p => p.id === professionId);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (isSubmitting) return;
-
+  const validateSubmission = () => {
     setError('');
 
     if (!user) {
@@ -135,26 +141,45 @@ export default function AportarSueldo() {
       const [lastKey, lastTimestamp] = lastSubmission.split('|');
       if (lastKey === submissionKey && Date.now() - Number(lastTimestamp) < 60000) {
         setError('Este aporte ya fue enviado hace menos de un minuto. Espera un momento antes de repetirlo.');
-        return;
+        return null;
       }
     }
 
-    if (!window.confirm('Confirmas que el monto es neto mensual, en mano, y que los datos son reales?')) {
+    return { parsedAmount, submissionKey };
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isSubmitting) return;
+
+    const draft = validateSubmission();
+    if (!draft) return;
+
+    setIsConfirmOpen(true);
+  };
+
+  const confirmSubmit = async () => {
+    if (isSubmitting) return;
+
+    const draft = validateSubmission();
+    if (!draft || !user) {
+      setIsConfirmOpen(false);
       return;
     }
 
+    setIsConfirmOpen(false);
     setIsSubmitting(true);
     try {
       await dataService.upsertSalaryReport({
         userId: user.uid,
         professionId,
-        amountMonthly: parsedAmount,
+        amountMonthly: draft.parsedAmount,
         modality,
         workload,
         seniority,
         province,
       });
-      window.localStorage.setItem('cuantocobras:last-salary-submission', `${submissionKey}|${Date.now()}`);
+      window.localStorage.setItem('cuantocobras:last-salary-submission', `${draft.submissionKey}|${Date.now()}`);
       setExistingReport(null);
       setSuccess(true);
       
@@ -502,6 +527,75 @@ export default function AportarSueldo() {
           </div>
         </form>
       </div>
+
+      {isConfirmOpen && selectedProfession && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 px-4 py-6">
+          <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden">
+            <div className="bg-slate-900 text-white p-5">
+              <p className="text-xs font-bold uppercase tracking-widest text-emerald-300 mb-2">
+                {existingReport ? 'Actualizar aporte' : 'Confirmar aporte'}
+              </p>
+              <h2 className="text-xl font-bold">Revisá los datos antes de guardar</h2>
+              <p className="text-sm text-slate-300 mt-1">
+                El reporte se publica de forma anónima. Tu cuenta solo evita duplicados.
+              </p>
+            </div>
+
+            <div className="p-5 space-y-4">
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <p className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-1">Profesión</p>
+                <p className="font-bold text-slate-900">{selectedProfession.name}</p>
+                <p className="text-sm text-slate-500">{selectedProfession.category}</p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="rounded-xl border border-slate-200 p-4">
+                  <p className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-1">Sueldo neto</p>
+                  <p className="text-2xl font-bold text-slate-900">{formatMoney(Number(amountMonthly) || 0)}</p>
+                </div>
+                <div className="rounded-xl border border-slate-200 p-4">
+                  <p className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-1">Provincia</p>
+                  <p className="font-bold text-slate-900">{province}</p>
+                </div>
+                <div className="rounded-xl border border-slate-200 p-4">
+                  <p className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-1">Contratación</p>
+                  <p className="font-bold text-slate-900">{MODALITY_LABELS[modality]}</p>
+                </div>
+                <div className="rounded-xl border border-slate-200 p-4">
+                  <p className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-1">Jornada</p>
+                  <p className="font-bold text-slate-900">{WORKLOAD_LABELS[workload]}</p>
+                </div>
+                <div className="rounded-xl border border-slate-200 p-4 sm:col-span-2">
+                  <p className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-1">Experiencia</p>
+                  <p className="font-bold text-slate-900">{SENIORITY_LABELS[seniority]}</p>
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-blue-100 bg-blue-50 p-4 text-sm text-blue-800">
+                Confirmá solo si el monto es mensual, neto y en mano. No vamos a pedirte recibos ni mostrar tu identidad públicamente.
+              </div>
+            </div>
+
+            <div className="border-t border-slate-100 bg-slate-50 p-4 flex flex-col-reverse sm:flex-row gap-3 sm:justify-end">
+              <button
+                type="button"
+                onClick={() => setIsConfirmOpen(false)}
+                className="px-5 py-3 rounded-xl font-bold text-slate-600 hover:bg-slate-200 transition-colors"
+              >
+                Volver a editar
+              </button>
+              <button
+                type="button"
+                onClick={confirmSubmit}
+                disabled={isSubmitting}
+                className="px-5 py-3 rounded-xl font-bold text-white bg-emerald-600 hover:bg-emerald-700 transition-colors disabled:opacity-50"
+              >
+                {isSubmitting ? 'Guardando...' : existingReport ? 'Actualizar aporte' : 'Confirmar y publicar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
