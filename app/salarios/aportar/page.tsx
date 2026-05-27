@@ -3,12 +3,12 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/AuthProvider';
-import { dataService, Profession } from '@/lib/data';
+import { dataService, Profession, SalaryReport } from '@/lib/data';
 import { FALLBACK_PROFESSIONS } from '@/lib/professions';
 import { DollarSign, Send, AlertCircle, CheckCircle2, Search, ChevronDown } from 'lucide-react';
 import Link from 'next/link';
 import { searchProfessions } from '@/lib/search';
-import { MAX_REASONABLE_SALARY, MIN_REASONABLE_SALARY } from '@/lib/salary-utils';
+import { formatReportDate, MAX_REASONABLE_SALARY, MIN_REASONABLE_SALARY } from '@/lib/salary-utils';
 
 const PROVINCES = [
   'Buenos Aires', 'Catamarca', 'Chaco', 'Chubut', 'Córdoba', 'Corrientes', 'Entre Ríos',
@@ -34,6 +34,8 @@ export default function AportarSueldo() {
   const [province, setProvince] = useState('CABA');
   
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoadingExistingReport, setIsLoadingExistingReport] = useState(false);
+  const [existingReport, setExistingReport] = useState<SalaryReport | null>(null);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
 
@@ -58,6 +60,36 @@ export default function AportarSueldo() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!user?.uid || !professionId) return;
+    const currentUserId = user.uid;
+    const currentProfessionId = professionId;
+
+    let isMounted = true;
+
+    async function loadExistingReport() {
+      setIsLoadingExistingReport(true);
+      const report = await dataService.getUserSalaryReportByProfession(currentUserId, currentProfessionId);
+      if (!isMounted) return;
+
+      setExistingReport(report || null);
+      if (report) {
+        setAmountMonthly(String(report.amountMonthly));
+        setModality(report.modality);
+        setWorkload(report.workload || 'full_time');
+        setSeniority(report.seniority);
+        setProvince(report.province);
+      }
+      setIsLoadingExistingReport(false);
+    }
+
+    loadExistingReport();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [professionId, user?.uid]);
+
   // Group and sort professions
   const filteredProfessions = searchProfessions(professions, searchQuery);
 
@@ -77,6 +109,11 @@ export default function AportarSueldo() {
     if (isSubmitting) return;
 
     setError('');
+
+    if (!user) {
+      setError('Tenes que iniciar sesion para aportar o actualizar tu sueldo.');
+      return;
+    }
     
     if (!professionId) {
       setError('Por favor seleccioná una profesión.');
@@ -108,7 +145,8 @@ export default function AportarSueldo() {
 
     setIsSubmitting(true);
     try {
-      await dataService.createSalaryReport({
+      await dataService.upsertSalaryReport({
+        userId: user.uid,
         professionId,
         amountMonthly: parsedAmount,
         modality,
@@ -117,6 +155,7 @@ export default function AportarSueldo() {
         province,
       });
       window.localStorage.setItem('cuantocobras:last-salary-submission', `${submissionKey}|${Date.now()}`);
+      setExistingReport(null);
       setSuccess(true);
       
       // Redirect after showing success message
@@ -253,6 +292,7 @@ export default function AportarSueldo() {
                               type="button"
                               onClick={() => {
                                 setProfessionId(p.id);
+                                setExistingReport(null);
                                 setIsDropdownOpen(false);
                                 setSearchQuery('');
                               }}
@@ -287,6 +327,24 @@ export default function AportarSueldo() {
               </>
             )}
           </div>
+
+          {isLoadingExistingReport && (
+            <div className="bg-slate-50 text-slate-600 p-4 rounded-xl text-sm border border-slate-200">
+              Revisando si ya tenes un aporte para esta profesion...
+            </div>
+          )}
+
+          {existingReport && (
+            <div className="bg-emerald-50 text-emerald-800 p-4 rounded-xl text-sm border border-emerald-100 flex gap-3">
+              <CheckCircle2 className="w-5 h-5 shrink-0 text-emerald-600" />
+              <div>
+                <p className="font-bold">Ya aportaste un sueldo para esta profesion.</p>
+                <p className="mt-1">
+                  Vamos a actualizar tu aporte existente en vez de crear otro. Ultima actualizacion: {formatReportDate(existingReport.updatedAt || existingReport.createdAt)}.
+                </p>
+              </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Sueldo */}
@@ -428,7 +486,7 @@ export default function AportarSueldo() {
             </Link>
             <button
               type="submit"
-              disabled={isSubmitting}
+              disabled={isSubmitting || isLoadingExistingReport}
               className="bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-3 rounded-xl font-bold shadow-sm transition-colors flex items-center gap-2 disabled:opacity-50"
             >
               {isSubmitting ? (
@@ -436,7 +494,7 @@ export default function AportarSueldo() {
               ) : (
                 <>
                   <Send className="w-4 h-4" />
-                  Publicar Aporte
+                  {existingReport ? 'Actualizar aporte' : 'Publicar aporte'}
                 </>
               )}
             </button>

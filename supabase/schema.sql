@@ -4,6 +4,7 @@ create table if not exists public.profiles (
   id uuid primary key default gen_random_uuid(),
   uid uuid not null unique references auth.users(id) on delete cascade,
   name text not null,
+  username text not null unique,
   email text not null,
   photo_url text,
   role text not null default 'user' check (role in ('user', 'admin')),
@@ -21,13 +22,16 @@ create table if not exists public.professions (
 
 create table if not exists public.salary_reports (
   id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete cascade,
   profession_id text not null,
   amount_monthly integer not null check (amount_monthly >= 0),
   modality text not null check (modality in ('en_blanco', 'en_negro', 'monotributo', 'autonomo')),
   workload text check (workload in ('full_time', 'part_time', 'por_horas')),
   seniority text not null check (seniority in ('junior', 'semi', 'senior', 'no_aplica')),
   province text not null,
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (user_id, profession_id)
 );
 
 create table if not exists public.posts (
@@ -55,6 +59,7 @@ create table if not exists public.replies (
 );
 
 create index if not exists salary_reports_profession_id_idx on public.salary_reports(profession_id);
+create index if not exists salary_reports_user_id_idx on public.salary_reports(user_id);
 create index if not exists posts_category_created_at_idx on public.posts(category, created_at desc);
 create index if not exists replies_post_id_created_at_idx on public.replies(post_id, created_at);
 
@@ -94,7 +99,14 @@ drop policy if exists "authenticated users can create salary reports" on public.
 create policy "authenticated users can create salary reports"
 on public.salary_reports for insert
 to authenticated
-with check (true);
+with check (auth.uid() = user_id);
+
+drop policy if exists "users can update own salary reports" on public.salary_reports;
+create policy "users can update own salary reports"
+on public.salary_reports for update
+to authenticated
+using (auth.uid() = user_id)
+with check (auth.uid() = user_id);
 
 drop policy if exists "posts are readable" on public.posts;
 create policy "posts are readable"

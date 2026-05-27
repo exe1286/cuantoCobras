@@ -135,7 +135,7 @@ function ReplyNode({
 export default function PostPage() {
   const { id } = useParams();
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   
   const [post, setPost] = useState<Post | null>(null);
   const [replies, setReplies] = useState<Reply[]>([]);
@@ -178,7 +178,7 @@ export default function PostPage() {
       postId: post.id,
       parentId: parentId,
       userId: user.uid,
-      authorName: user.email?.split('@')[0] || 'Anonimo',
+      authorName: profile?.username || user.email?.split('@')[0] || 'Anonimo',
       body: newReplyBody,
     });
     

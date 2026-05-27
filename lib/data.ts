@@ -6,6 +6,7 @@ export interface Profile {
   id: string;
   uid: string;
   name: string;
+  username?: string;
   email: string;
   photoURL?: string;
   role: 'user' | 'admin';
@@ -21,6 +22,7 @@ export interface Profession {
 
 export interface SalaryReport {
   id: string;
+  userId?: string;
   professionId: string;
   amountMonthly: number;
   modality: 'en_blanco' | 'en_negro' | 'monotributo' | 'autonomo';
@@ -28,6 +30,7 @@ export interface SalaryReport {
   seniority: 'junior' | 'semi' | 'senior' | 'no_aplica';
   province: string;
   createdAt: number;
+  updatedAt?: number;
 }
 
 export interface Post {
@@ -68,6 +71,8 @@ const FALLBACK_POSTS: Post[] = [
     createdAt: Date.now() - 200000,
   },
 ];
+
+const PUBLIC_SALARY_COLUMNS = 'id, profession_id, amount_monthly, modality, workload, seniority, province, created_at, updated_at';
 
 class SupabaseDataService {
   private fallbackProfiles: Profile[] = [];
@@ -110,6 +115,7 @@ class SupabaseDataService {
       id: row.id,
       uid: row.uid,
       name: row.name,
+      username: row.username || undefined,
       email: row.email,
       photoURL: row.photo_url || undefined,
       role: row.role || 'user',
@@ -129,6 +135,7 @@ class SupabaseDataService {
   private mapSalary(row: any): SalaryReport {
     return {
       id: row.id,
+      userId: row.user_id || undefined,
       professionId: row.profession_id,
       amountMonthly: row.amount_monthly,
       modality: row.modality,
@@ -136,6 +143,7 @@ class SupabaseDataService {
       seniority: row.seniority,
       province: row.province,
       createdAt: new Date(row.created_at).getTime(),
+      updatedAt: row.updated_at ? new Date(row.updated_at).getTime() : undefined,
     };
   }
 
@@ -196,10 +204,30 @@ class SupabaseDataService {
       .insert({
         uid: profile.uid,
         name: profile.name,
+        username: profile.username || null,
         email: profile.email,
         photo_url: profile.photoURL || null,
         role: profile.role,
       })
+      .select('*')
+      .single();
+
+    if (error) throw error;
+    return this.mapProfile(data);
+  }
+
+  async updateProfileUsername(uid: string, username: string) {
+    if (!supabase) {
+      const profile = this.fallbackProfiles.find(item => item.uid === uid);
+      if (!profile) return undefined;
+      profile.username = username;
+      return profile;
+    }
+
+    const { data, error } = await supabase
+      .from('profiles')
+      .update({ username })
+      .eq('uid', uid)
       .select('*')
       .single();
 
@@ -242,7 +270,7 @@ class SupabaseDataService {
 
     const { data, error } = await supabase
       .from('salary_reports')
-      .select('*')
+      .select(PUBLIC_SALARY_COLUMNS)
       .eq('profession_id', professionId)
       .order('created_at', { ascending: false });
 
@@ -252,6 +280,28 @@ class SupabaseDataService {
     }
 
     return data.map(row => this.mapSalary(row));
+  }
+
+  async getUserSalaryReportByProfession(userId: string, professionId: string) {
+    if (!supabase) {
+      return this.fallbackSalaryReports.find(report => (
+        report.userId === userId && report.professionId === professionId
+      ));
+    }
+
+    const { data, error } = await supabase
+      .from('salary_reports')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('profession_id', professionId)
+      .maybeSingle();
+
+    if (error) {
+      console.error('Error loading user salary report', error);
+      return undefined;
+    }
+
+    return data ? this.mapSalary(data) : undefined;
   }
 
   async getTopProfessions() {
@@ -300,7 +350,7 @@ class SupabaseDataService {
 
     const { data, error } = await supabase
       .from('salary_reports')
-      .select('*')
+      .select(PUBLIC_SALARY_COLUMNS)
       .order('created_at', { ascending: false })
       .limit(5);
 
@@ -319,29 +369,37 @@ class SupabaseDataService {
     });
   }
 
-  async createSalaryReport(report: Omit<SalaryReport, 'id' | 'createdAt'>) {
+  async upsertSalaryReport(report: Omit<SalaryReport, 'id' | 'createdAt' | 'updatedAt'>) {
     if (!supabase) {
-      const newReport: SalaryReport = {
-        ...report,
-        id: uuidv4(),
-        createdAt: Date.now(),
-      };
+      const existingReport = this.fallbackSalaryReports.find(item => (
+        item.userId === report.userId && item.professionId === report.professionId
+      ));
+
+      if (existingReport) {
+        Object.assign(existingReport, report, { updatedAt: Date.now() });
+        return existingReport;
+      }
+
+      const newReport: SalaryReport = { ...report, id: uuidv4(), createdAt: Date.now(), updatedAt: Date.now() };
       this.fallbackSalaryReports.push(newReport);
       return newReport;
     }
 
+    const now = new Date().toISOString();
     const { data, error } = await this.withTimeout(
       Promise.resolve(
         supabase
           .from('salary_reports')
-          .insert({
+          .upsert({
+            user_id: report.userId,
             profession_id: report.professionId,
             amount_monthly: report.amountMonthly,
             modality: report.modality,
             workload: report.workload || null,
             seniority: report.seniority,
             province: report.province,
-          })
+            updated_at: now,
+          }, { onConflict: 'user_id,profession_id' })
           .select('*')
           .single()
       )
@@ -349,6 +407,10 @@ class SupabaseDataService {
 
     if (error) throw error;
     return this.mapSalary(data);
+  }
+
+  async createSalaryReport(report: Omit<SalaryReport, 'id' | 'createdAt' | 'updatedAt'>) {
+    return this.upsertSalaryReport(report);
   }
 
   async getTopPosts() {

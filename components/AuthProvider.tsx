@@ -4,6 +4,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { dataService, Profile } from '@/lib/data';
+import { generateUsername } from '@/lib/usernames';
 
 export type AppUser = SupabaseUser & {
   uid: string;
@@ -52,10 +53,20 @@ async function syncProfile(user: AppUser) {
     userProfile = await dataService.createProfile({
       uid: user.uid,
       name: user.displayName || 'Usuario',
+      username: generateUsername(),
       email: user.email || '',
       photoURL: user.photoURL || undefined,
       role: 'user',
     });
+  } else if (!userProfile.username) {
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      try {
+        userProfile = await dataService.updateProfileUsername(user.uid, generateUsername()) || userProfile;
+        break;
+      } catch (error) {
+        if (attempt === 2) console.error('Error assigning username', error);
+      }
+    }
   }
 
   return userProfile;

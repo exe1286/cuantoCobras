@@ -10,6 +10,7 @@ export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const publicUsername = profile?.username ? `u/${profile.username}` : user?.displayName;
 
   const handleLogout = async () => {
     if (isLoggingOut) return;
@@ -73,7 +74,7 @@ export default function Navbar() {
                 {isProfileMenuOpen && (
                   <div className="origin-top-right absolute right-0 mt-2 w-48 rounded-xl shadow-xl py-1 bg-slate-800 border border-slate-700 z-10 block text-slate-300">
                     <div className="px-4 py-2 border-b border-slate-700">
-                      <p className="text-sm font-medium text-white truncate">{user.displayName}</p>
+                      <p className="text-sm font-medium text-white truncate">{publicUsername}</p>
                       <p className="text-xs text-slate-400 truncate">{user.email}</p>
                     </div>
                     {profile?.role === 'admin' && (
@@ -176,7 +177,7 @@ export default function Navbar() {
                   )}
                 </div>
                 <div className="ml-3">
-                  <div className="text-base font-medium text-white">{user.displayName}</div>
+                  <div className="text-base font-medium text-white">{publicUsername}</div>
                   <div className="text-sm font-medium text-slate-400">{user.email}</div>
                 </div>
               </div>

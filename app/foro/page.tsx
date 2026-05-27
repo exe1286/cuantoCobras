@@ -26,7 +26,7 @@ export default function Foro() {
   const [newBody, setNewBody] = useState('');
   const [newCategory, setNewCategory] = useState(FORUM_CATEGORIES[1]);
   
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
 
   useEffect(() => {
     loadPosts();
@@ -50,7 +50,7 @@ export default function Foro() {
     
     await dataService.createPost({
       userId: user.uid,
-      authorName: user.email?.split('@')[0] || 'Anonimo',
+      authorName: profile?.username || user.email?.split('@')[0] || 'Anonimo',
       title: newTitle,
       body: newBody,
       flair: 'consulta', // Default flair for user posts
