@@ -233,6 +233,7 @@ export default function AportarSueldo() {
           <p>
             <strong>Importante:</strong> Para que los datos sean realmente útiles, te pedimos que aportes información verídica y precisa. 
             El sitio no solicita comprobantes ni recibos de sueldo, dependemos de la buena fe de la comunidad para construir referencias salariales justas para todos.
+            Tu cuenta se usa solo para evitar duplicados y permitirte actualizar tu aporte. Publicamente no mostramos tu nombre, email ni foto.
           </p>
         </div>
 

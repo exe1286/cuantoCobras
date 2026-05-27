@@ -2,10 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { dataService, Profession, Post } from '@/lib/data';
-import { Search, MessageSquare, DollarSign } from 'lucide-react';
+import { Search, MessageSquare, DollarSign, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
 import { searchProfessions } from '@/lib/search';
-import { formatMoney, MODALITY_LABELS, SENIORITY_LABELS } from '@/lib/salary-utils';
+import { formatMoney, formatReportDate, MODALITY_LABELS, SENIORITY_LABELS } from '@/lib/salary-utils';
 
 export default function Home() {
   const [professions, setProfessions] = useState<Profession[]>([]);
@@ -78,6 +78,20 @@ export default function Home() {
             </Link>
           ))}
         </div>
+        <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-3 w-full max-w-3xl text-left">
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 flex gap-2">
+            <ShieldCheck className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
+            <p className="text-xs text-slate-600">Aportes anonimos en pantalla, sin email ni nombre real.</p>
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 flex gap-2">
+            <ShieldCheck className="w-4 h-4 text-blue-600 mt-0.5 shrink-0" />
+            <p className="text-xs text-slate-600">Una carga activa por usuario y profesion para evitar duplicados.</p>
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 flex gap-2">
+            <ShieldCheck className="w-4 h-4 text-indigo-600 mt-0.5 shrink-0" />
+            <p className="text-xs text-slate-600">Promedios protegidos contra valores extremos y muestras chicas.</p>
+          </div>
+        </div>
       </div>
 
       {/* Forums Section (Bento Grid Left) */}
@@ -126,6 +140,7 @@ export default function Home() {
             {recentSalaries.map(salary => (
               <Link href={`/salarios/${salary.profession?.slug}`} key={salary.id} className="bg-slate-800/80 border border-slate-700/80 rounded-xl p-4 hover:border-slate-600 transition-colors block">
                 <p className="text-xs font-bold text-slate-400 mb-1">{salary.profession?.name}</p>
+                <p className="text-[11px] text-slate-500 mb-2">{formatReportDate(salary.updatedAt || salary.createdAt)}</p>
                 <div className="flex items-baseline gap-1 mb-3">
                   <p className="text-2xl font-bold text-white">{formatMoney(salary.amountMonthly)}</p>
                   <p className="text-xs text-slate-500 font-medium">/ mes</p>

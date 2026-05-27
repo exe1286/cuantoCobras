@@ -4,7 +4,7 @@ import { useMemo, useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { dataService, Profession, SalaryReport } from '@/lib/data';
 import Link from 'next/link';
-import { ArrowLeft, User, MapPin, Briefcase, BarChart3, ShieldCheck, TrendingUp } from 'lucide-react';
+import { ArrowLeft, User, MapPin, Briefcase, BarChart3, ShieldCheck, TrendingUp, Lock, CalendarDays } from 'lucide-react';
 import {
   formatMoney,
   formatReportDate,
@@ -87,6 +87,9 @@ export default function ProfessionSalariesPage() {
     { label: 'Maximo', value: stats.max, tone: 'bg-white border-slate-200 text-slate-800', hint: 'Reporte mas alto' },
   ];
   const shouldShowStats = stats.hasEnoughData;
+  const latestReport = filteredSalaries
+    .map(salary => salary.updatedAt || salary.createdAt)
+    .sort((a, b) => b - a)[0];
 
   return (
     <div className="max-w-screen-xl mx-auto w-full p-4 lg:p-0 mb-12">
@@ -107,7 +110,7 @@ export default function ProfessionSalariesPage() {
             </span>
             <h1 className="text-3xl md:text-5xl font-bold text-slate-900 tracking-tight">{profession.name}</h1>
             <p className="mt-3 text-sm text-slate-500 max-w-2xl">
-              Datos anonimos aportados por la comunidad. Las estadisticas excluyen valores extremos para que la referencia sea mas justa.
+              Datos anonimos aportados por la comunidad. Tu cuenta solo se usa para evitar duplicados y permitir editar tu propio aporte.
             </p>
           </div>
 
@@ -171,6 +174,32 @@ export default function ProfessionSalariesPage() {
             Limpiar filtros
           </button>
         )}
+
+        <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 flex gap-3">
+            <Lock className="w-5 h-5 text-slate-500 mt-0.5" />
+            <div>
+              <p className="font-bold text-slate-800 text-sm">Anonimato publico</p>
+              <p className="text-sm text-slate-500">No publicamos nombre, email ni foto. Los reportes se muestran sin identidad.</p>
+            </div>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 flex gap-3">
+            <CalendarDays className="w-5 h-5 text-slate-500 mt-0.5" />
+            <div>
+              <p className="font-bold text-slate-800 text-sm">Actualizacion</p>
+              <p className="text-sm text-slate-500">
+                {latestReport ? `Dato mas reciente: ${formatReportDate(latestReport)}.` : 'Todavia no hay reportes para esta seleccion.'}
+              </p>
+            </div>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 flex gap-3">
+            <BarChart3 className="w-5 h-5 text-slate-500 mt-0.5" />
+            <div>
+              <p className="font-bold text-slate-800 text-sm">Metodo</p>
+              <p className="text-sm text-slate-500">La mediana es la referencia principal; los extremos y muestras chicas se tratan con cuidado.</p>
+            </div>
+          </div>
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
           {statCards.map(card => (
@@ -243,7 +272,9 @@ export default function ProfessionSalariesPage() {
                 <div className="flex justify-between items-start mb-4 gap-3">
                   <div>
                     <h3 className="text-2xl font-bold text-slate-800 mb-1">{formatMoney(salary.amountMonthly)}</h3>
-                    <p className="text-xs font-mono text-slate-400">{formatReportDate(salary.createdAt)}</p>
+                    <p className="text-xs font-mono text-slate-400">
+                      {salary.updatedAt && salary.updatedAt !== salary.createdAt ? `actualizado ${formatReportDate(salary.updatedAt)}` : formatReportDate(salary.createdAt)}
+                    </p>
                   </div>
                   <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500 bg-slate-100 px-2 py-1 rounded">
                     {MODALITY_LABELS[salary.modality]}
