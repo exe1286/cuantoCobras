@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { dataService, Profession } from '@/lib/data';
 import { DollarSign, Search } from 'lucide-react';
 import Link from 'next/link';
+import { searchProfessions } from '@/lib/search';
 
 export default function Salarios() {
   const [professions, setProfessions] = useState<Profession[]>([]);
@@ -16,17 +17,8 @@ export default function Salarios() {
     load();
   }, []);
 
-  const normalizeString = (str: string) => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-  
-  const filtered = professions.filter(p => {
-    const queryNormalized = normalizeString(query);
-    const matchNameOrCat = normalizeString(p.name).includes(queryNormalized) || normalizeString(p.category).includes(queryNormalized);
-    if (matchNameOrCat) return true;
-    if (p.keywords) {
-      return p.keywords.some(k => normalizeString(k).includes(queryNormalized));
-    }
-    return false;
-  });
+  const filtered = searchProfessions(professions, query);
+  const categories = Array.from(new Set(professions.map(profession => profession.category))).sort();
 
   return (
     <div className="max-w-screen-xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-6 p-4 lg:p-0">
@@ -59,6 +51,11 @@ export default function Salarios() {
             onChange={(e) => setQuery(e.target.value)}
             className="w-full pl-12 pr-4 py-4 bg-slate-800/80 border border-slate-700 rounded-xl text-lg focus:ring-2 focus:ring-emerald-500 outline-none text-white placeholder-slate-400 transition-shadow"
           />
+        </div>
+        <div className="mt-4 relative z-10 flex flex-wrap justify-center gap-2 text-xs text-slate-400">
+          <span>{filtered.length} profesiones encontradas</span>
+          <span>/</span>
+          <span>{categories.length} rubros</span>
         </div>
       </div>
 

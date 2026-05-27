@@ -7,6 +7,8 @@ import { dataService, Profession } from '@/lib/data';
 import { FALLBACK_PROFESSIONS } from '@/lib/professions';
 import { DollarSign, Send, AlertCircle, CheckCircle2, Search, ChevronDown } from 'lucide-react';
 import Link from 'next/link';
+import { searchProfessions } from '@/lib/search';
+import { MAX_REASONABLE_SALARY, MIN_REASONABLE_SALARY } from '@/lib/salary-utils';
 
 const PROVINCES = [
   'Buenos Aires', 'Catamarca', 'Chaco', 'Chubut', 'Córdoba', 'Corrientes', 'Entre Ríos',
@@ -57,17 +59,7 @@ export default function AportarSueldo() {
   }, []);
 
   // Group and sort professions
-  const normalizeString = (str: string) => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-  
-  const filteredProfessions = professions.filter(p => {
-    const queryNormalized = normalizeString(searchQuery);
-    const matchNameOrCat = normalizeString(p.name).includes(queryNormalized) || normalizeString(p.category).includes(queryNormalized);
-    if (matchNameOrCat) return true;
-    if (p.keywords) {
-      return p.keywords.some(k => normalizeString(k).includes(queryNormalized));
-    }
-    return false;
-  });
+  const filteredProfessions = searchProfessions(professions, searchQuery);
 
   const professionsByCategory = filteredProfessions.reduce((acc, p) => {
     if (!acc[p.category]) acc[p.category] = [];
@@ -90,8 +82,27 @@ export default function AportarSueldo() {
       setError('Por favor seleccioná una profesión.');
       return;
     }
-    if (!amountMonthly || isNaN(Number(amountMonthly)) || Number(amountMonthly) < 0) {
-      setError('Por favor ingresá un sueldo válido.');
+    const parsedAmount = Number(amountMonthly);
+    if (!amountMonthly || isNaN(parsedAmount) || parsedAmount < MIN_REASONABLE_SALARY) {
+      setError(`Por favor ingresa un sueldo mensual mayor a $${MIN_REASONABLE_SALARY.toLocaleString('es-AR')}.`);
+      return;
+    }
+    if (parsedAmount > MAX_REASONABLE_SALARY) {
+      setError(`Ese monto parece demasiado alto. El maximo permitido es $${MAX_REASONABLE_SALARY.toLocaleString('es-AR')}.`);
+      return;
+    }
+
+    const submissionKey = `${professionId}:${parsedAmount}:${modality}:${workload}:${seniority}:${province}`;
+    const lastSubmission = window.localStorage.getItem('cuantocobras:last-salary-submission');
+    if (lastSubmission) {
+      const [lastKey, lastTimestamp] = lastSubmission.split('|');
+      if (lastKey === submissionKey && Date.now() - Number(lastTimestamp) < 60000) {
+        setError('Este aporte ya fue enviado hace menos de un minuto. Espera un momento antes de repetirlo.');
+        return;
+      }
+    }
+
+    if (!window.confirm('Confirmas que el monto es neto mensual, en mano, y que los datos son reales?')) {
       return;
     }
 
@@ -99,12 +110,13 @@ export default function AportarSueldo() {
     try {
       await dataService.createSalaryReport({
         professionId,
-        amountMonthly: Number(amountMonthly),
+        amountMonthly: parsedAmount,
         modality,
         workload,
         seniority,
         province,
       });
+      window.localStorage.setItem('cuantocobras:last-salary-submission', `${submissionKey}|${Date.now()}`);
       setSuccess(true);
       
       // Redirect after showing success message
@@ -289,10 +301,14 @@ export default function AportarSueldo() {
                   onChange={(e) => setAmountMonthly(e.target.value)}
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-8 pr-4 py-3 text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
                   required
-                  min="0"
+                  min={MIN_REASONABLE_SALARY}
+                  max={MAX_REASONABLE_SALARY}
                   step="1000"
                 />
               </div>
+              <p className="mt-2 text-xs text-slate-500">
+                Rango permitido: ${MIN_REASONABLE_SALARY.toLocaleString('es-AR')} a ${MAX_REASONABLE_SALARY.toLocaleString('es-AR')} netos mensuales.
+              </p>
             </div>
 
             {/* Provincia */}

@@ -256,7 +256,35 @@ class SupabaseDataService {
 
   async getTopProfessions() {
     const professions = await this.getProfessions();
-    return professions.slice(0, 5);
+
+    if (!supabase) {
+      const counts = this.fallbackSalaryReports.reduce((acc, report) => {
+        acc.set(report.professionId, (acc.get(report.professionId) || 0) + 1);
+        return acc;
+      }, new Map<string, number>());
+
+      return [...professions]
+        .sort((a, b) => (counts.get(b.id) || 0) - (counts.get(a.id) || 0) || a.name.localeCompare(b.name))
+        .slice(0, 5);
+    }
+
+    const { data, error } = await supabase
+      .from('salary_reports')
+      .select('profession_id');
+
+    if (error) {
+      console.error('Error loading top professions', error);
+      return professions.slice(0, 5);
+    }
+
+    const counts = data.reduce((acc, report) => {
+      acc.set(report.profession_id, (acc.get(report.profession_id) || 0) + 1);
+      return acc;
+    }, new Map<string, number>());
+
+    return [...professions]
+      .sort((a, b) => (counts.get(b.id) || 0) - (counts.get(a.id) || 0) || a.name.localeCompare(b.name))
+      .slice(0, 5);
   }
 
   async getRecentSalaries() {

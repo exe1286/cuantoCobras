@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { dataService, Profession, Post } from '@/lib/data';
-import { Search, TrendingUp, MessageSquare, DollarSign, Calendar } from 'lucide-react';
+import { Search, MessageSquare, DollarSign } from 'lucide-react';
 import Link from 'next/link';
+import { searchProfessions } from '@/lib/search';
+import { formatMoney, MODALITY_LABELS, SENIORITY_LABELS } from '@/lib/salary-utils';
 
 export default function Home() {
   const [professions, setProfessions] = useState<Profession[]>([]);
@@ -22,19 +24,7 @@ export default function Home() {
     load();
   }, []);
 
-  const normalizeString = (str: string) => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-  
-  const searchResults = query.trim() !== '' 
-    ? allProfessions.filter(p => {
-        const queryNormalized = normalizeString(query);
-        const matchNameOrCat = normalizeString(p.name).includes(queryNormalized) || normalizeString(p.category).includes(queryNormalized);
-        if (matchNameOrCat) return true;
-        if (p.keywords) {
-          return p.keywords.some(k => normalizeString(k).includes(queryNormalized));
-        }
-        return false;
-      })
-    : [];
+  const searchResults = query.trim() !== '' ? searchProfessions(allProfessions, query).slice(0, 8) : [];
 
   return (
     <div className="max-w-screen-xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-6 p-4 lg:p-0">
@@ -137,12 +127,12 @@ export default function Home() {
               <Link href={`/salarios/${salary.profession?.slug}`} key={salary.id} className="bg-slate-800/80 border border-slate-700/80 rounded-xl p-4 hover:border-slate-600 transition-colors block">
                 <p className="text-xs font-bold text-slate-400 mb-1">{salary.profession?.name}</p>
                 <div className="flex items-baseline gap-1 mb-3">
-                  <p className="text-2xl font-bold text-white">${salary.amountMonthly.toLocaleString('es-AR')}</p>
+                  <p className="text-2xl font-bold text-white">{formatMoney(salary.amountMonthly)}</p>
                   <p className="text-xs text-slate-500 font-medium">/ mes</p>
                 </div>
                 <div className="flex flex-wrap gap-1.5">
-                  <span className="text-[10px] px-2 py-0.5 rounded bg-slate-700 text-slate-300 uppercase tracking-widest">{salary.modality.replace('_', ' ')}</span>
-                  <span className="text-[10px] px-2 py-0.5 rounded bg-slate-700 text-slate-300 uppercase tracking-widest">{salary.seniority.replace('_', ' ')}</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded bg-slate-700 text-slate-300 uppercase tracking-widest">{MODALITY_LABELS[salary.modality as keyof typeof MODALITY_LABELS]}</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded bg-slate-700 text-slate-300 uppercase tracking-widest">{SENIORITY_LABELS[salary.seniority as keyof typeof SENIORITY_LABELS]}</span>
                 </div>
               </Link>
             ))}
