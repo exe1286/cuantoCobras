@@ -86,6 +86,7 @@ export default function ProfessionSalariesPage() {
     { label: 'Minimo', value: stats.min, tone: 'bg-white border-slate-200 text-slate-800', hint: 'Reporte mas bajo' },
     { label: 'Maximo', value: stats.max, tone: 'bg-white border-slate-200 text-slate-800', hint: 'Reporte mas alto' },
   ];
+  const shouldShowStats = stats.hasEnoughData;
 
   return (
     <div className="max-w-screen-xl mx-auto w-full p-4 lg:p-0 mb-12">
@@ -175,10 +176,12 @@ export default function ProfessionSalariesPage() {
           {statCards.map(card => (
             <div key={card.label} className={`border rounded-2xl p-6 shadow-sm ${card.tone}`}>
               <p className="text-sm font-semibold opacity-80">{card.label}</p>
-              <p className="mt-1 text-3xl font-bold">
-                {card.value > 0 ? formatMoney(card.value) : '---'}
+              <p className={`mt-1 font-bold ${shouldShowStats ? 'text-3xl' : 'text-xl'}`}>
+                {shouldShowStats && card.value > 0 ? formatMoney(card.value) : 'Datos insuficientes'}
               </p>
-              <p className="mt-2 text-xs opacity-70">{card.hint}</p>
+              <p className="mt-2 text-xs opacity-70">
+                {shouldShowStats ? card.hint : 'Se muestran los reportes, pero no se publica una referencia estadistica.'}
+              </p>
             </div>
           ))}
         </div>
@@ -189,7 +192,7 @@ export default function ProfessionSalariesPage() {
             <div>
               <p className="font-bold text-slate-800 text-sm">Calidad de muestra</p>
               <p className="text-sm text-slate-500">
-                {stats.hasEnoughData ? 'Hay suficientes reportes para una referencia inicial.' : 'Todavia hay pocos reportes; tomalo como orientativo.'}
+                {stats.hasEnoughData ? 'Hay suficientes reportes para una referencia inicial.' : 'Hay menos de 3 reportes; ocultamos promedio, mediana y extremos para no sobrerrepresentar un dato aislado.'}
               </p>
             </div>
           </div>

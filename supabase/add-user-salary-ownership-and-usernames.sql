@@ -17,6 +17,13 @@ add column if not exists user_id uuid references auth.users(id) on delete cascad
 alter table public.salary_reports
 add column if not exists updated_at timestamptz not null default now();
 
+alter table public.salary_reports
+drop constraint if exists salary_reports_amount_monthly_check;
+
+alter table public.salary_reports
+add constraint salary_reports_amount_monthly_check
+check (amount_monthly between 50000 and 20000000);
+
 with profile_count as (
   select count(*) as total from public.profiles
 ),

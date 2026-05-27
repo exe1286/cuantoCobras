@@ -24,7 +24,7 @@ create table if not exists public.salary_reports (
   id uuid primary key default gen_random_uuid(),
   user_id uuid references auth.users(id) on delete cascade,
   profession_id text not null,
-  amount_monthly integer not null check (amount_monthly >= 0),
+  amount_monthly integer not null check (amount_monthly between 50000 and 20000000),
   modality text not null check (modality in ('en_blanco', 'en_negro', 'monotributo', 'autonomo')),
   workload text check (workload in ('full_time', 'part_time', 'por_horas')),
   seniority text not null check (seniority in ('junior', 'semi', 'senior', 'no_aplica')),
